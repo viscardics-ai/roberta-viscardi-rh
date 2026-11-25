@@ -7,7 +7,7 @@ const prompts = [
   'O contexto', 'Por que isso importa para o RH?', 'O olhar da Business Partner',
   'Impacto no mercado imobiliário', 'Na prática', 'Contraponto', 'Pergunta estratégica',
 ] as const
-const defaultModel = '@cf/meta/llama-3.1-8b-instruct-fast'
+const defaultModel = '@cf/ibm-granite/granite-4.0-h-micro'
 
 export const enabledAI = (env: Env) => env.ENABLE_AI === 'true' && !!env.AI
 

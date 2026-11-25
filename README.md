@@ -68,13 +68,13 @@ Com o mesmo ID D1 nos dois arquivos de configuração, publique somente o Worker
 npx wrangler deploy --config wrangler.cron.jsonc
 ```
 
-O Cron Trigger roda às 10h UTC para corresponder a 7h em Brasília. O Worker compartilha o bloqueio de concorrência da atualização manual e opera sem um computador local ligado. Após confirmar o agendamento e verificar a primeira execução nos logs, configure `AUTOMATIC_UPDATES=true` em Pages. Mantenha o valor falso quando o Cron estiver fora de serviço. Para testar agendamento localmente, use `wrangler dev --config wrangler.cron.jsonc --test-scheduled` e consulte `/__scheduled?cron=0+10+*+*+*` no ambiente do Wrangler.
+O Cron Trigger roda às 10h UTC para corresponder a 7h em Brasília. O Worker compartilha o bloqueio de concorrência da atualização manual e opera sem um computador local ligado. O portal exibe o horário quando `AUTOMATIC_UPDATES=true` na configuração do Pages. Verifique a primeira execução nos logs após o horário programado. Ajuste o valor para falso quando o Cron estiver fora de serviço. Para testar agendamento localmente, use `wrangler dev --config wrangler.cron.jsonc --test-scheduled` e consulte `/__scheduled?cron=0+10+*+*+*` no ambiente do Wrangler.
 
 [Cloudflare Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/)
 
 ### Workers AI
 
-O site funciona com `ENABLE_AI=false`. Para habilitar, confirme que o modelo configurado está disponível no plano gratuito. Acrescente `"ai": { "binding": "AI" }` à configuração do Pages e do Worker. Adicione `ENABLE_AI=true` às variáveis dos dois serviços. Se desejar, defina `AI_MODEL`, cujo padrão é `@cf/meta/llama-3.1-8b-instruct-fast`.
+O site funciona com `ENABLE_AI=false`. Para habilitar, confirme que o modelo configurado está disponível no plano gratuito. Acrescente `"ai": { "binding": "AI" }` à configuração do Pages e do Worker. Adicione `ENABLE_AI=true` às variáveis dos dois serviços. Se desejar, defina `AI_MODEL`, cujo padrão é `@cf/ibm-granite/granite-4.0-h-micro`.
 
 A análise é opcional e usa título e trecho efetivamente recebidos. A resposta do provedor é validada e as hipóteses ficam identificadas no artigo. O fato de referência vem do feed. Títulos e resumos internacionais mantêm o link original. Há no máximo duas chamadas por coleta e seis por dia no mesmo banco. Análises salvas são reaproveitadas. Ao exceder a cota ou ter falha de provedor, a coleta em português continua. Monitore consumo no painel, que aplica a franquia da conta. O arquivo [server/ai.ts](server/ai.ts) é o ponto de integração com outro provedor. Mantenha o plano gratuito e preserve a configuração de IA desativada em ambientes que não a utilizam.
 

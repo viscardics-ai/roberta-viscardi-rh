@@ -11,6 +11,6 @@
       "migrations_dir": "migrations"
     }
   ],
-  "vars": { "ENABLE_AI": "false", "AUTOMATIC_UPDATES": "false" }
+  "vars": { "ENABLE_AI": "false", "AUTOMATIC_UPDATES": "true" }
   // Opcional para IA: adicione "ai": { "binding": "AI" } e habilite ENABLE_AI.
 }
