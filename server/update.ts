@@ -100,7 +100,7 @@ export async function updatePortal(env: Env, trigger: 'manual' | 'scheduled', re
       } catch (error) {
         aiFailures++
         if (error instanceof AiResponseError) {
-          analysisIssue = 'A resposta não passou pela validação editorial.'
+          analysisIssue = error.message
         } else {
           const code = error instanceof Error ? error.message.match(/\b5\d{3}\b/)?.[0] : undefined
           analysisIssue = 'Erro no serviço Workers AI' + (code ? ' (código ' + code + ')' : '') + '.'

@@ -96,8 +96,8 @@ test('grava análise estruturada em notícia já coletada sem duplicar o acervo'
     DB: db,
     ENABLE_AI: 'true',
     AI: { run: async (_model: unknown, input: { response_format?: { type: string } }) => {
-      assert.equal(input.response_format?.type, 'json_object')
-      return { response: { secoes: { 'Na prática': 'Valide os objetivos de aprendizagem com a equipe.' } } }
+      assert.equal(input.response_format?.type, 'json_schema')
+      return { response: { secoes: { pratica: 'Valide os objetivos de aprendizagem com a equipe.' } } }
     } } as unknown as Ai,
   }
   const unchanged = async () => new Response(null, { status: 304 })
