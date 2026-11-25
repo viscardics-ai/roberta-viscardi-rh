@@ -11,6 +11,19 @@
       "migrations_dir": "migrations"
     }
   ],
-  "vars": { "ENABLE_AI": "false", "AUTOMATIC_UPDATES": "true" }
-  // Opcional para IA: adicione "ai": { "binding": "AI" } e habilite ENABLE_AI.
+  "vars": { "ENABLE_AI": "false", "AUTOMATIC_UPDATES": "false" },
+  "env": {
+    "production": {
+      "vars": { "ENABLE_AI": "true", "AUTOMATIC_UPDATES": "true" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "robertaviscardi",
+          "database_id": "c4006ed9-233f-4baa-b18e-0824df71fdaf",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "ai": { "binding": "AI" }
+    }
+  }
 }
