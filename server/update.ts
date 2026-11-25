@@ -10,6 +10,7 @@ import type { FeedEntry } from './feed'
 const activeSources = sources.filter(source => source.feed)
 const urlAllowlist = new Set(activeSources.map(source => source.feed))
 const manualDelay = 15 * 60_000
+const failedRunDelay = 60_000
 const leaseTime = 4 * 60_000
 const feedLimit = 850_000
 const analysisLimit = 2
@@ -28,7 +29,7 @@ export async function fetchSource(source: Source, cache?: CacheRow, request: typ
   const headers = new Headers({ Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml', 'User-Agent': 'RV-Pessoas-Portal/1.0' })
   if (cache?.etag) headers.set('If-None-Match', cache.etag)
   if (cache?.modified) headers.set('If-Modified-Since', cache.modified)
-  const response = await request(url.href, { headers, redirect: 'error', signal: AbortSignal.timeout(7500) })
+  const response = await request(url.href, { headers, redirect: 'manual', signal: AbortSignal.timeout(7500) })
   if (response.status === 304) return { items: [], source }
   if (!response.ok || !/(?:xml|rss|atom)/i.test(response.headers.get('content-type') || '')) throw new Error('Feed indisponível ou formato incompatível.')
   const xml = await readText(response, feedLimit)
@@ -36,7 +37,8 @@ export async function fetchSource(source: Source, cache?: CacheRow, request: typ
 }
 
 async function recentRun(db: D1Database) {
-  return db.prepare('SELECT started FROM update_runs ORDER BY started DESC LIMIT 1').first<string>('started')
+  return db.prepare("SELECT started,json_extract(status,'$.state') AS state FROM update_runs ORDER BY started DESC LIMIT 1")
+    .first<{ started: string; state: UpdateStatus['state'] }>()
 }
 
 async function getLease(db: D1Database, id: string, now: number) {
@@ -55,8 +57,10 @@ export async function updatePortal(env: Env, trigger: 'manual' | 'scheduled', re
   const status: UpdateStatus = { state: 'running', time: new Date(now).toISOString(), added: 0, failures: [], ai: enabledAI(env) ? 'IA habilitada.' : 'IA desativada ou ainda sem configuração.' }
   try {
     const last = await recentRun(db)
-    if (trigger === 'manual' && last && now - Date.parse(last) < manualDelay) {
-      throw new UpdateError('Aguarde 15 minutos entre coletas manuais.', 429)
+    const previousFailed = last?.state === 'failed'
+    const delay = previousFailed ? failedRunDelay : manualDelay
+    if (trigger === 'manual' && last && now - Date.parse(last.started) < delay) {
+      throw new UpdateError(previousFailed ? 'Aguarde 1 minuto após uma coleta que falhou.' : 'Aguarde 15 minutos entre coletas manuais.', 429)
     }
     await db.prepare('INSERT INTO update_runs(id,started,status) VALUES (?,?,?)').bind(id, status.time, JSON.stringify(status)).run()
     started = true

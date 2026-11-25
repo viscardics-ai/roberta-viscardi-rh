@@ -37,10 +37,21 @@ test('rejeita DTD e separa texto do conteúdo não confiável', async () => {
 test('usa cache HTTP e rejeita destinos não cadastrados', async () => {
   const upstream: typeof fetch = async (_url, init) => {
     assert.equal(new Headers(init?.headers).get('If-None-Match'), '"a"')
-    assert.equal(init?.redirect,'error')
+    assert.equal(init?.redirect, 'manual')
     return new Response(null,{ status: 304 })
   }
   const result = await fetchSource(economy, { etag: '"a"', modified: null }, upstream)
   assert.deepEqual(result.items,[])
   await assert.rejects(fetchSource({ ...economy, feed: 'https://example.org/canal.xml' },undefined,upstream))
+})
+
+test('recusa o redirecionamento sem consultar o destino', async () => {
+  const visited: string[] = []
+  const redirected: typeof fetch = async (url, init) => {
+    visited.push(String(url))
+    assert.equal(init?.redirect, 'manual')
+    return new Response(null, { status: 302, headers: { Location: 'https://example.org/outro-feed.xml' } })
+  }
+  await assert.rejects(fetchSource(economy, undefined, redirected), /Feed indisponível/)
+  assert.deepEqual(visited, [economy.feed])
 })

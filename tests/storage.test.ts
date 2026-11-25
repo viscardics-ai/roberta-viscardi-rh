@@ -58,6 +58,14 @@ test('persiste coleta em D1, mantém válidos durante falhas e impede repetiçã
   assert.equal(failed.state,'failed')
   assert.deepEqual(failed.failures,[selected.name])
   assert.equal(await db.prepare('SELECT count(*) AS total FROM entries').first('total'), 1)
+  await assert.rejects(updatePortal({ DB: db }, 'manual', upstream), /1 minuto/)
+  const afterFailure = new Date(Date.now() - 2 * 60_000).toISOString()
+  const earlierRuns = new Date(Date.now() - 20 * 60_000).toISOString()
+  await db.prepare("UPDATE update_runs SET started=CASE WHEN json_extract(status,'$.state')='failed' THEN ? ELSE ? END")
+    .bind(afterFailure, earlierRuns).run()
+  const recovered = await updatePortal({ DB: db }, 'manual', upstream)
+  assert.equal(recovered.state, 'ok')
+  assert.equal(recovered.added, 0)
 })
 
 test('exige sessão e aprovação explícita, mantendo rascunho e versão pública separados', async () => {
