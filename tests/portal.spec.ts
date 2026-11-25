@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import type { Entry, PortalData } from '../src/model'
 
 test('abre carrossel, mantém favoritos e histórico, exporta uma leitura', async ({ page }) => {
   await page.goto('/')
@@ -59,6 +60,42 @@ test('comunica inscrições e área editorial indisponíveis na versão estátic
   await expect(page.getByText('Servidor do portal indisponível neste ambiente.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Publicar versão' })).toHaveCount(0)
 })
+
+for (const [width, height] of [[1920, 920], [1366, 768], [1280, 720]]) {
+  test('exibe destaques completos e curadoria na tela inicial de ' + width + ' × ' + height, async ({ page }) => {
+    const titles = [
+      'Seconci-Rio completa 38 anos com mais de 6 milhões de atendimentos realizados para os trabalhadores da construção',
+      'MTE detalha regras para implementação da escala 5×2 e redução da jornada de trabalho',
+      'Deu na mídia: Presidente da CBIC alerta para impactos do fim da escala 6×1 na construção civil',
+    ]
+    const entries: Entry[] = titles.map((title, index) => ({
+      id: 'noticia-' + index,
+      title,
+      summary: title,
+      category: 'Mercado & Pessoas',
+      kind: 'Notícia',
+      themes: ['mercado'],
+      level: 'Introdução',
+      source: 'CBIC',
+      date: new Date().toISOString(),
+      evidence: 'rss',
+      minutes: 1,
+    }))
+    const portal: PortalData = { state: 'online', entries, update: null }
+    await page.route('**/api/portal', route => route.fulfill({ json: portal }))
+    await page.setViewportSize({ width, height })
+    await page.goto('/')
+    const weekly = page.locator('.weekly')
+    for (const title of titles) await expect(weekly.getByRole('heading', { name: title, exact: true })).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+
+    await expect(weekly).toBeInViewport({ ratio: 1 })
+    await expect(page.locator('.newsletter')).toBeInViewport({ ratio: 1 })
+    expect(await page.evaluate(() => window.scrollY)).toBe(0)
+    await page.getByRole('contentinfo').scrollIntoViewIfNeeded()
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+  })
+}
 
 for (const [width, height] of [[1536,1024],[1920,1080],[1366,768],[1440,900],[390,844]]) {
   test('valida e captura a tela ' + width + ' × ' + height, async ({ page }) => {

@@ -11,7 +11,7 @@ import { PortalProvider } from './state'
 function App() {
   const { pathname } = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
-  return <div className="app">
+  return <div className={pathname === '/' ? 'app home-page' : 'app'}>
     <a className="skip" href="#conteudo">Pular para o conteúdo</a>
     <div className="brush page-brush-top" />
     {pathname === '/' && <div className="brush page-brush-bottom" />}

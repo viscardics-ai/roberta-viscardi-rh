@@ -247,6 +247,73 @@ h1, h2, h3, p { margin: 0; }
   .market > p { font-size: 15px; }
   .newsletter { padding-inline: 13px; gap: 8px; }
 }
+
+/* Fit the opening grid into shorter desktop windows while letting headlines wrap. */
+@media (min-width: 1171px) and (max-height: 1000px) {
+  .home-page .header-top { height: auto; min-height: clamp(58px, 8vh, 76px); }
+  .home-page .search { flex-basis: clamp(235px, calc(60vw - 520px), 411px); }
+  .home-page .navigation { height: clamp(38px, 5vh, 48px); }
+  .home-page .page-brush-bottom { top: calc(100vh - 92px); height: 120px; }
+  .home-grid { margin-top: clamp(12px, 1.8vh, 18px); }
+
+  .home-grid .hero { min-height: clamp(214px, 30vh, 288px); }
+  .home-grid .hero-copy { padding-block: clamp(14px, 2vh, 21px); }
+  .home-grid .hero-badge { padding-block: 5px; min-height: 27px; font-size: 13px; }
+  .home-grid .hero h1 { font-size: clamp(31px, min(2.7vw, 4.5vh), 44px); margin-block: 7px 9px; }
+  .home-grid .hero-copy p { font-size: clamp(16px, 1.95vh, 18px); line-height: 1.32; margin-bottom: 12px; }
+  .home-grid .hero .primary-button { min-height: 40px; }
+  .home-grid .hero-dots { bottom: 13px; }
+
+  .home-grid .topics { margin-top: 9px; }
+  .home-grid .tile { min-height: clamp(62px, 7.8vh, 74px); }
+  .home-grid .tile > svg { width: clamp(24px, 3.2vh, 30px); height: clamp(24px, 3.2vh, 30px); }
+  .home-grid .weekly { margin-top: clamp(14px, 2.2vh, 22px); }
+  .home-grid .weekly-grid { margin-top: 9px; }
+  .home-grid .weekly-grid .article-card { min-height: clamp(188px, 25vh, 242px); }
+  .home-grid .weekly-grid .card-photo { height: clamp(72px, 11vh, 108px); }
+  .home-grid .weekly-grid .card-body { padding-block: 8px; }
+  .home-grid .weekly-grid h3 { font-size: clamp(16px, 1.9vh, 17.5px); }
+
+  .home-grid .market { min-height: clamp(126px, 16vh, 158px); padding-block: 10px 11px; }
+  .home-grid .market-title > svg { width: 48px; height: 48px; }
+  .home-grid .market-title p { font-size: 17px; }
+  .home-grid .market-title h2 { font-size: clamp(24px, 3.25vh, 32px); }
+  .home-grid .market > p { margin-top: 6px; font-size: 15px; }
+  .home-grid .quick { margin-top: 12px; }
+  .home-grid .quick-grid { margin-top: 7px; }
+  .home-grid .point { margin-top: clamp(17px, 2.8vh, 28px); }
+  .home-grid .point-content { margin-top: 7px; min-height: 0; grid-template-columns: 70px 1fr 24px; }
+  .home-grid .point-content .avatar { width: 70px; height: 70px; }
+  .home-grid .practice-card { margin-top: clamp(15px, 2.7vh, 28px); min-height: 76px; padding-block: 8px; }
+  .home-grid .newsletter { margin-top: clamp(16px, 3.1vh, 32px); min-height: 0; padding-block: 11px 8px; }
+  .home-grid .newsletter .primary-button { margin-top: 9px; }
+}
+
+@media (min-width: 1171px) and (max-height: 820px) {
+  .home-grid .hero { min-height: 206px; }
+  .home-grid .hero-copy { padding-block: 10px 14px; }
+  .home-grid .hero-badge { min-height: 24px; padding-block: 3px; }
+  .home-grid .hero-copy p { margin-bottom: 8px; }
+  .home-grid .hero .primary-button { min-height: 36px; }
+  .home-grid .tile { gap: 3px; min-height: 56px; }
+  .home-grid .tile > svg { width: 22px; height: 22px; }
+  .home-grid .weekly { margin-top: 13px; }
+  .home-grid .weekly-grid .card-photo { height: clamp(56px, calc(25vh - 124px), 68px); }
+
+  .home-grid .sidebar .desktop-break { display: none; }
+  .home-grid .market { min-height: 0; padding-block: 8px; }
+  .home-grid .market-title > svg { width: 39px; height: 39px; }
+  .home-grid .quick, .home-grid .point { margin-top: 10px; }
+  .home-grid .point-content { grid-template-columns: 54px 1fr 22px; }
+  .home-grid .point-content .avatar { width: 54px; height: 54px; }
+  .home-grid .point-content h3 { margin-bottom: 3px; }
+  .home-grid .practice-card { margin-top: 10px; min-height: 0; padding-block: 6px; }
+  .home-grid .newsletter { margin-top: 10px; grid-template-columns: 29px 1fr; gap: 9px; padding-inline: 13px; }
+  .home-grid .newsletter > svg { width: 29px; height: 29px; }
+  .home-grid .newsletter h2 { font-size: 18px; }
+  .home-grid .newsletter p { font-size: 13px; }
+}
+
 @media (max-width: 900px) {
   .wrap { width: calc(100% - 36px); }
   .header { padding-left: 0; }
