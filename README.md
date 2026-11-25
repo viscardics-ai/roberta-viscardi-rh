@@ -37,16 +37,14 @@ O calendário de referência está em [src/content.ts](src/content.ts). Para inc
 
 ## Cloudflare D1
 
-No painel da conta Cloudflare, selecione o plano gratuito. Crie um banco D1 chamado `robertaviscardi` e copie o identificador:
+A configuração de produção aponta para o banco D1 `robertaviscardi`. Se usar outro banco, atualize o campo `database_id` nos dois arquivos de configuração do Wrangler.
+
+Aplique o esquema antes de publicar. Pelo painel da Cloudflare, abra **Storage & databases → D1 SQL Database → robertaviscardi → Console**. Copie o conteúdo de [migrations/0001_portal.sql](migrations/0001_portal.sql), cole no Console e execute. Para conferir a criação das tabelas, rode `SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name;` e verifique se aparecem `entries`, `articles` e `ideas`.
+
+Para aplicar pelo terminal autenticado na conta da Cloudflare, use:
 
 ```sh
 npx wrangler login
-npx wrangler d1 create robertaviscardi
-```
-
-Substitua o UUID zerado em `wrangler.jsonc` e `wrangler.cron.jsonc` pelo ID do banco. Aplique o esquema antes de publicar:
-
-```sh
 npx wrangler d1 migrations apply DB --remote
 ```
 
