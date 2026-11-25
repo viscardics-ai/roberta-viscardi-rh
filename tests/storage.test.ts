@@ -91,6 +91,29 @@ test('exige sessão e aprovação explícita, mantendo rascunho e versão públi
   assert.equal((await editorData(editorDb)).drafts[0].title, 'Título em revisão')
 })
 
+test('grava análise estruturada em notícia já coletada sem duplicar o acervo', async () => {
+  const env = {
+    DB: db,
+    ENABLE_AI: 'true',
+    AI: { run: async (_model: unknown, input: { response_format?: { type: string } }) => {
+      assert.equal(input.response_format?.type, 'json_object')
+      return { response: { secoes: { 'Na prática': 'Valide os objetivos de aprendizagem com a equipe.' } } }
+    } } as unknown as Ai,
+  }
+  const unchanged = async () => new Response(null, { status: 304 })
+  const run = await updatePortal(env, 'scheduled', unchanged)
+  assert.equal(run.added, 0)
+  assert.match(run.ai, /1 respostas de IA processadas/)
+  const json = await db.prepare('SELECT data FROM analyses').first<string>('data')
+  assert.ok(json)
+  assert.deepEqual(JSON.parse(json).map((item: { title: string }) => item.title), [
+    'A notícia · trecho da fonte',
+    'Na prática',
+  ])
+  await updatePortal(env, 'scheduled', unchanged)
+  assert.equal(await db.prepare('SELECT count(*) AS total FROM analyses').first('total'), 1)
+})
+
 test('consulta os feeds públicos e grava notícias reais no D1 local', { skip: process.env.PORTAL_LIVE_FEEDS !== '1' }, async context => {
   await db.prepare('DELETE FROM source_settings').run()
   const report = await updatePortal({ DB: db }, 'scheduled')

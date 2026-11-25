@@ -2,7 +2,7 @@ import { sources } from '../src/catalog'
 import type { Source } from '../src/catalog'
 import { safeHttps } from '../src/model'
 import type { Entry, UpdateStatus } from '../src/model'
-import { assist, enabledAI, reserveAiBudget } from './ai'
+import { AiResponseError, assist, enabledAI, reserveAiBudget } from './ai'
 import type { Env } from './env'
 import { parseFeed, readText } from './feed'
 import type { FeedEntry } from './feed'
@@ -15,6 +15,7 @@ const leaseTime = 4 * 60_000
 const feedLimit = 850_000
 const analysisLimit = 2
 const maxInserts = 20
+const analysisFailure = 'IA parcialmente indisponível. 0 respostas processadas.'
 
 export class UpdateError extends Error {
   constructor(message: string, readonly code: number) { super(message) }
@@ -37,8 +38,8 @@ export async function fetchSource(source: Source, cache?: CacheRow, request: typ
 }
 
 async function recentRun(db: D1Database) {
-  return db.prepare("SELECT started,json_extract(status,'$.state') AS state FROM update_runs ORDER BY started DESC LIMIT 1")
-    .first<{ started: string; state: UpdateStatus['state'] }>()
+  return db.prepare("SELECT started,json_extract(status,'$.state') AS state,json_extract(status,'$.ai') AS ai FROM update_runs ORDER BY started DESC LIMIT 1")
+    .first<{ started: string; state: UpdateStatus['state']; ai: string | null }>()
 }
 
 async function getLease(db: D1Database, id: string, now: number) {
@@ -52,21 +53,22 @@ export async function updatePortal(env: Env, trigger: 'manual' | 'scheduled', re
   const db = env.DB
   const now = Date.now()
   const id = crypto.randomUUID()
+  const aiEnabled = enabledAI(env)
   if (!await getLease(db, id, now)) throw new UpdateError('Já existe uma coleta em andamento.', 429)
   let started = false
-  const status: UpdateStatus = { state: 'running', time: new Date(now).toISOString(), added: 0, failures: [], ai: enabledAI(env) ? 'IA habilitada.' : 'IA desativada ou ainda sem configuração.' }
+  const status: UpdateStatus = { state: 'running', time: new Date(now).toISOString(), added: 0, failures: [], ai: aiEnabled ? 'IA habilitada.' : 'IA desativada ou ainda sem configuração.' }
   try {
     const last = await recentRun(db)
-    const previousFailed = last?.state === 'failed'
+    const previousFailed = last?.state === 'failed' || (aiEnabled && last?.ai?.startsWith(analysisFailure))
     const delay = previousFailed ? failedRunDelay : manualDelay
     if (trigger === 'manual' && last && now - Date.parse(last.started) < delay) {
-      throw new UpdateError(previousFailed ? 'Aguarde 1 minuto após uma coleta que falhou.' : 'Aguarde 15 minutos entre coletas manuais.', 429)
+      throw new UpdateError(previousFailed ? 'Aguarde 1 minuto antes de tentar novamente.' : 'Aguarde 15 minutos entre coletas manuais.', 429)
     }
     await db.prepare('INSERT INTO update_runs(id,started,status) VALUES (?,?,?)').bind(id, status.time, JSON.stringify(status)).run()
     started = true
     const configured = await db.prepare('SELECT id,enabled FROM source_settings').all<{ id: string; enabled: number }>()
     const disabled = new Set(configured.results.filter(row => !row.enabled).map(row => row.id))
-    const selected = activeSources.filter(source => !disabled.has(source.id) && (source.lang !== 'en' || enabledAI(env)))
+    const selected = activeSources.filter(source => !disabled.has(source.id) && (source.lang !== 'en' || aiEnabled))
     const cached = await db.prepare('SELECT id,etag,modified FROM source_cache').all<CacheRow & { id: string }>()
     const cache = new Map(cached.results.map(row => [row.id, row]))
     const results = await Promise.allSettled(selected.map(source => fetchSource(source, cache.get(source.id), request)))
@@ -80,6 +82,37 @@ export async function updatePortal(env: Env, trigger: 'manual' | 'scheduled', re
     let aiFailures = 0
     let aiSuccesses = 0
     let budgetExhausted = false
+    let analysisIssue = ''
+    const assessed = new Set<string>()
+    const canAnalyze = () => aiEnabled && aiAttempts < analysisLimit && !budgetExhausted
+    async function analyze(entry: Entry, translate: boolean) {
+      if (!canAnalyze()) return undefined
+      if (!await reserveAiBudget(db)) {
+        budgetExhausted = true
+        return undefined
+      }
+      aiAttempts++
+      assessed.add(entry.id)
+      try {
+        const analysis = await assist(env, entry, translate)
+        aiSuccesses++
+        return analysis
+      } catch (error) {
+        aiFailures++
+        if (error instanceof AiResponseError) {
+          analysisIssue = 'A resposta não passou pela validação editorial.'
+        } else {
+          const code = error instanceof Error ? error.message.match(/\b5\d{3}\b/)?.[0] : undefined
+          analysisIssue = 'Erro no serviço Workers AI' + (code ? ' (código ' + code + ')' : '') + '.'
+        }
+        console.warn('Falha no Workers AI', error instanceof Error ? error.message.slice(0, 200) : 'Erro desconhecido')
+      }
+    }
+    function saveAnalysis(entry: Entry, sections: NonNullable<Entry['sections']>) {
+      const content = [{ title: 'A notícia · trecho da fonte', text: entry.summary }, ...sections]
+      return db.prepare('INSERT OR IGNORE INTO analyses(entry_id,provider,created,data) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM entries WHERE id=?)')
+        .bind(entry.id, env.AI_MODEL || 'Workers AI', status.time, JSON.stringify(content), entry.id)
+    }
     const pendingSource = new Set<string>()
     const existing = new Set<string>()
     for (let index = 0; index < candidates.length; index += 40) {
@@ -93,7 +126,7 @@ export async function updatePortal(env: Env, trigger: 'manual' | 'scheduled', re
       }
     }
     const international = candidates.findIndex(item => item.source.lang === 'en' && !existing.has(item.entry.url) && !existing.has(item.titleKey))
-    if (international > 0 && enabledAI(env)) candidates.unshift(...candidates.splice(international, 1))
+    if (international > 0 && aiEnabled) candidates.unshift(...candidates.splice(international, 1))
     for (const record of candidates) {
       const { entry, titleKey, source } = record
       const translated = source.lang === 'en'
@@ -102,17 +135,7 @@ export async function updatePortal(env: Env, trigger: 'manual' | 'scheduled', re
         pendingSource.add(source.id)
         continue
       }
-      const addAI = enabledAI(env) && aiAttempts < analysisLimit && !budgetExhausted
-      let assessment: Awaited<ReturnType<typeof assist>> | undefined
-      if (addAI) {
-        if (await reserveAiBudget(db)) {
-          aiAttempts++
-          try {
-            assessment = await assist(env, entry, translated)
-            aiSuccesses++
-          } catch { aiFailures++ }
-        } else budgetExhausted = true
-      }
+      const assessment = await analyze(entry, translated)
       if (translated && !assessment?.title) {
         pendingSource.add(source.id)
         continue
@@ -125,13 +148,26 @@ export async function updatePortal(env: Env, trigger: 'manual' | 'scheduled', re
       }
       const params = [data.id, entry.url, titleKey, source.id, data.category, data.date ?? null, data.score || 0, status.time, JSON.stringify(data)]
       const insert = db.prepare('INSERT OR IGNORE INTO entries(id,url,title_key,source_id,category,published,score,created,data) VALUES (?,?,?,?,?,?,?,?,?)').bind(...params)
-      const sections = assessment?.sections.length ? [{ title: 'A notícia · trecho da fonte', text: data.summary }, ...assessment.sections] : []
-      const change = sections.length
-        ? (await db.batch([insert, db.prepare('INSERT OR IGNORE INTO analyses(entry_id,provider,created,data) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM entries WHERE id=?)').bind(data.id, env.AI_MODEL || 'Workers AI', status.time, JSON.stringify(sections), data.id)]))[0]
+      const change = assessment?.sections.length
+        ? (await db.batch([insert, saveAnalysis(data, assessment.sections)]))[0]
         : await insert.run()
       status.added += change.meta.changes
       existing.add(entry.url)
       existing.add(titleKey)
+    }
+    if (canAnalyze()) {
+      const cutoff = new Date(now - 7 * 86400000).toISOString()
+      const pending = await db.prepare(`SELECT e.data FROM entries e
+        LEFT JOIN analyses a ON a.entry_id=e.id
+        WHERE a.entry_id IS NULL AND e.published>=?
+        ORDER BY e.score DESC, e.published DESC LIMIT ?`)
+        .bind(cutoff, analysisLimit + assessed.size).all<{ data: string }>()
+      for (const row of pending.results) {
+        const entry = JSON.parse(row.data) as Entry
+        if (assessed.has(entry.id)) continue
+        const analysis = await analyze(entry, false)
+        if (analysis?.sections.length) await saveAnalysis(entry, analysis.sections).run()
+      }
     }
     for (const { source, cache: next } of successful) {
       if (next && !pendingSource.has(source.id)) {
@@ -141,7 +177,8 @@ export async function updatePortal(env: Env, trigger: 'manual' | 'scheduled', re
     }
     status.state = successful.length ? status.failures.length ? 'partial' : 'ok' : 'failed'
     if (!selected.length) status.failures.push('Nenhuma fonte de coleta ativa')
-    if (enabledAI(env)) status.ai = budgetExhausted ? 'Limite diário de IA alcançado. O acervo foi preservado.' :
+    if (aiEnabled) status.ai = budgetExhausted ? 'Limite diário de IA alcançado. O acervo foi preservado.' :
+      aiFailures && !aiSuccesses ? analysisFailure + ' ' + analysisIssue :
       aiFailures ? 'IA parcialmente indisponível. ' + aiSuccesses + ' respostas processadas.' :
       aiAttempts ? aiSuccesses + ' respostas de IA processadas.' : 'IA habilitada. Nenhuma análise nova nesta coleta.'
     return status
