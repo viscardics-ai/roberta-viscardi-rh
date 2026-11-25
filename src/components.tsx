@@ -8,6 +8,7 @@ import { dayFormat, themes, timeFormat } from './model'
 import type { Entry } from './model'
 import { usePortal } from './state'
 import { featureIds, weeklyIds } from './content'
+import { distinctNewsCovers } from './covers'
 
 const sections = [
   { path: '/', title: 'Início', icon: House },
@@ -165,7 +166,7 @@ export function Home() {
     .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.date || '').localeCompare(a.date || ''))
   const featured = fresh.find(item => item.sections?.length)
   const carousel = featured ? [editorial[0], featured, editorial[1]] : editorial
-  const weekly = [...fresh, ...weeklyIds.map(id => entries.find(item => item.id === id)!)].slice(0, 3)
+  const weekly = distinctNewsCovers([...fresh, ...weeklyIds.map(id => entries.find(item => item.id === id)!)].slice(0, 3))
   return <main className="wrap home-grid" id="conteudo">
     <div className="editorial">
       <Carousel entries={carousel} />

@@ -1,6 +1,7 @@
 import type { Env } from '../../server/env'
 import type { Entry, PortalData, UpdateStatus } from '../../src/model'
 import { apiError, json } from '../../server/http'
+import { withNewsCover } from '../../src/covers'
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
   if (!env.DB) return json({ state: 'static', entries: [], update: null } satisfies PortalData)
@@ -25,7 +26,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
           entry.minutes = 3
           entry.level = 'Intermediário'
         }
-        return entry
+        return withNewsCover(entry)
       }),
     ]
     const update = updates.results.length ? JSON.parse(String(updates.results[0].status)) as UpdateStatus : null

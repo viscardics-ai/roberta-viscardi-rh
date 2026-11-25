@@ -128,8 +128,6 @@ export async function parseFeed(xml: string, source: Source, now = Date.now()): 
       author: author || undefined, category: classification.category, themes: classification.themes, score: classification.score,
       kind: 'Notícia', source: source.name, date: Number.isFinite(moment) ? new Date(moment).toISOString() : undefined,
       evidence: 'rss', level: 'Introdução', minutes: 1,
-      image: classification.category === 'Legislação' ? '/images/legislacao.webp' : classification.themes.includes('mercado') ? '/images/imobiliario.webp' : '/images/futuro.webp',
-      imageAlt: 'Imagem temática da editoria',
       legalStatus: classification.category === 'Legislação' ? 'Notícia sobre tema trabalhista · consulte a fonte oficial para confirmar natureza e vigência' : undefined,
     }
     items.push({ entry, titleKey: await digest(normalize(title).replace(/[^a-z0-9]+/g, ' ').trim()), source })
