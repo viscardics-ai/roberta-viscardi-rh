@@ -30,7 +30,12 @@ test('abre o artigo da semana pela capa principal', async ({ page }) => {
   await hero.getByRole('link', { name: 'Ler o artigo' }).click()
   await expect(page).toHaveURL('/materia/' + feature.id)
   await expect(page.getByRole('heading', { level: 1, name: feature.title })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Fontes e evidências' })).toBeVisible()
+  await expect(page.locator('.reading .lead')).toHaveText(feature.summary)
+  for (const section of feature.sections ?? []) {
+    if (section.title) await expect(page.getByRole('heading', { name: section.title, exact: true })).toBeVisible()
+    const opening = section.text.split('\n')[0]
+    await expect(page.getByText(opening, { exact: false })).toBeVisible()
+  }
 })
 
 test('pesquisa sem acentos, filtra o acervo e navega por editorias', async ({ page }) => {

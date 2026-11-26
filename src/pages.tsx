@@ -111,6 +111,8 @@ export function downloadText(name: string, value: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+const articleEmphasis = /\*\*([^*\n]+)\*\*/g
+
 export function Article() {
   const { id } = useParams()
   const { entries, loading, markRead, flash } = usePortal()
@@ -129,7 +131,8 @@ export function Article() {
   if (!entry) return loading || fetchingEntry ? <main className="page wrap" id="conteudo"><div className="skeleton" aria-label="Carregando matéria" /></main> : <NotFound />
   const references = [...(entry.url ? [{ name: entry.source + ' · Fonte original', url: entry.url }] : []), ...(entry.references ?? [])]
   function exportEntry(item: Entry) {
-    downloadText(item.id + '.txt', [item.title, item.summary, item.source, item.legalStatus, ...item.sections?.map(section => section.title + '\n' + section.text) ?? [], ...references.map(ref => ref.name + '\n' + ref.url)].filter(Boolean).join('\n\n'))
+    const sections = item.sections?.map(({ title, text }) => [title, text.replace(articleEmphasis, '$1')].filter(Boolean).join('\n')) ?? []
+    downloadText(item.id + '.txt', [item.title, item.summary, item.source, item.legalStatus, ...sections, ...references.map(ref => ref.name + '\n' + ref.url)].filter(Boolean).join('\n\n'))
   }
   async function share() {
     try {
@@ -153,7 +156,10 @@ export function Article() {
     {entry.evidence === 'rss' && <p className="research-note">Fonte consultada via RSS. O portal dispõe do título e do trecho publicado no feed. {entry.sections?.length ? 'Leitura assistida por IA. As sugestões são hipóteses para investigação.' : 'Consulte o texto original para aprofundar a leitura.'}</p>}
     {entry.evidence === 'editorial' && <p className="research-note">Curadoria de referência do portal. Os cenários e exercícios são ilustrativos.</p>}
     {entry.originalTitle && <p className="results">Título original: {entry.originalTitle}</p>}
-    {entry.sections?.map(({ title, text }) => <section key={title}><h2>{title}</h2><p>{text}</p></section>)}
+    {entry.sections?.map(({ title, text }) => <section key={title}>
+      {title && <h2>{title}</h2>}
+      <p>{text.split(articleEmphasis).map((part, index) => index % 2 ? <strong key={index}>{part}</strong> : part)}</p>
+    </section>)}
     {!!references.length && <section><h2>Fontes e evidências</h2><ul className="sources-links">{references.map(ref => <li key={ref.url}><External href={ref.url}>{ref.name}</External></li>)}</ul></section>}
     <div className="action-row">{themes.filter(theme => entry.themes.includes(theme.id)).map(theme => <Link key={theme.id} className="secondary-button" to={'/tema/' + theme.id}>{theme.label}</Link>)}</div>
   </main>
