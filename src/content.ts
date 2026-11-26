@@ -1,4 +1,5 @@
 import type { DiaryEntry, Entry } from './model'
+import { weeklyArticles } from './weekly-articles'
 
 const nr1 = 'https://www.gov.br/trabalho-e-emprego/pt-br/acesso-a-informacao/participacao-social/conselhos-e-orgaos-colegiados/comissao-tripartite-partitaria-permanente/normas-regulamentadora/normas-regulamentadoras-vigentes/nr-1'
 const wef = 'https://www.weforum.org/publications/the-future-of-jobs-report-2025'
@@ -100,6 +101,7 @@ export const initialEntries: Entry[] = [
     category: 'Na Prática', kind: 'Checklist', themes: ['ferramentas','mercado','carreira'], level: 'Introdução', source: 'Curadoria do portal', evidence: 'editorial', minutes: 3,
     sections: [{ title: 'Antes do início', text: 'Defina a liderança responsável, as pessoas de referência e os pontos de passagem do atendimento. Separe situações fictícias de visita, proposta e documentação.' }, { title: 'Primeira semana', text: 'Revise as responsabilidades e conduza uma simulação de atendimento. Combine um horário para feedback e defina como sinalizar dúvidas.' }, { title: 'Após 30 dias', text: 'Revise uma transição bem executada e uma que gerou retrabalho. Registre a próxima prática, a evidência esperada e a data de revisão.' }],
   },
+  ...weeklyArticles,
 ]
 
 export const diary: DiaryEntry[] = [
@@ -107,5 +109,5 @@ export const diary: DiaryEntry[] = [
   { id: 'formacao-bp', title: 'Formação em Business Partner de RH', date: '2027-03-15', location: 'ABRH-RS · Porto Alegre (organizadora)', format: 'Curso', organizer: 'ABRH-RS', url: 'https://www.abrhrs.org.br/cursos/business-partner-de-rh' },
 ]
 
-export const featureIds = ['gestao-de-pessoas-imobiliario','nr-1-riscos-psicossociais','futuro-do-trabalho-competencias']
+export const featureIds = [weeklyArticles[0].id, 'nr-1-riscos-psicossociais', 'gestao-de-pessoas-imobiliario']
 export const weeklyIds = ['talento-cultura-proposito','nr-1-riscos-psicossociais','futuro-do-trabalho-competencias']

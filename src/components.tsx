@@ -111,16 +111,18 @@ export function StatusPanel() {
 function Carousel({ entries }: { entries: Entry[] }) {
   const [slide, setSlide] = useState(0)
   const active = entries[slide % entries.length]
-  return <section className="hero" aria-roledescription="carrossel" aria-label="Matérias em destaque">
-    <img className={'hero-photo' + (active.id === featureIds[0] ? ' waterfront' : '')} src={active.image || '/images/futuro.webp'} alt={active.imageAlt || ''} fetchPriority="high" />
+  const weeklyFeature = active.id === featureIds[0]
+  const waterfront = active.id === 'gestao-de-pessoas-imobiliario'
+  return <section className={weeklyFeature ? 'hero hero-light' : 'hero'} aria-roledescription="carrossel" aria-label="Matérias em destaque">
+    <img className={waterfront ? 'hero-photo waterfront' : 'hero-photo'} src={active.image || '/images/futuro.webp'} alt={active.imageAlt || ''} fetchPriority="high" />
     <div className="hero-shade" />
     <div className="brush hero-brush-top" />
     <div className="brush hero-brush-bottom" />
     <div className="hero-copy" aria-live="polite">
-      <span className="hero-badge">Em destaque</span>
-      <h1>{active.id === featureIds[0] ? <>Gestão de Pessoas no<br className="hero-break" /> Setor Imobiliário de Alto Padrão</> : active.title}</h1>
+      <span className="hero-badge">{weeklyFeature ? 'Artigo da semana' : 'Em destaque'}</span>
+      <h1>{waterfront ? <>Gestão de Pessoas no<br className="hero-break" /> Setor Imobiliário de Alto Padrão</> : active.title}</h1>
       <p>{active.summary}</p>
-      <Link className="primary-button" to={'/materia/' + active.id}>Ler análise completa <ArrowRight size={20} /></Link>
+      <Link className="primary-button" to={'/materia/' + active.id}>{weeklyFeature ? 'Ler o artigo' : 'Ler análise completa'} <ArrowRight size={20} /></Link>
     </div>
     <div className="hero-dots" aria-label="Selecionar destaque">
       {entries.map((entry, index) => <button type="button" key={entry.id} aria-label={'Destaque ' + (index + 1) + ': ' + entry.title} aria-pressed={index === slide % entries.length} onClick={() => setSlide(index)} />)}
@@ -165,7 +167,7 @@ export function Home() {
   const fresh = entries.filter(item => item.evidence === 'rss' && item.date && Date.now() - Date.parse(item.date) <= 7 * 86400000)
     .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.date || '').localeCompare(a.date || ''))
   const featured = fresh.find(item => item.sections?.length)
-  const carousel = featured ? [editorial[0], featured, editorial[1]] : editorial
+  const carousel = [editorial[0], featured ?? editorial[1], editorial[2]]
   const weekly = distinctNewsCovers([...fresh, ...weeklyIds.map(id => entries.find(item => item.id === id)!)].slice(0, 3))
   return <main className="wrap home-grid" id="conteudo">
     <div className="editorial">

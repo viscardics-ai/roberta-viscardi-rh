@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test'
 import type { Entry, PortalData } from '../src/model'
+import { weeklyArticles } from '../src/weekly-articles'
 
 test('abre carrossel, mantém favoritos e histórico, exporta uma leitura', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /Gestão de Pessoas no Setor Imobiliário/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: weeklyArticles[0].title, exact: true })).toBeVisible()
   await page.getByRole('button', { name: /^Destaque 2:/ }).click()
   await expect(page.getByRole('heading', { level: 1, name: /NR-1 em 2026/ })).toBeVisible()
   await page.getByRole('link', { name: 'Ler análise completa' }).click()
@@ -16,6 +17,20 @@ test('abre carrossel, mantém favoritos e histórico, exporta uma leitura', asyn
   await expect(page.getByRole('link', { name: /NR-1 em 2026/ })).toBeVisible()
   await page.getByRole('link', { name: 'Notificações e histórico' }).click()
   await expect(page.getByRole('link', { name: /NR-1 em 2026/ })).toBeVisible()
+})
+
+test('abre o artigo da semana pela capa principal', async ({ page }) => {
+  const feature = weeklyArticles[0]
+  await page.goto('/')
+  const hero = page.locator('.hero')
+  await expect(hero.getByText('Artigo da semana')).toBeVisible()
+  const cover = hero.getByAltText(feature.imageAlt!)
+  await expect(cover).toHaveAttribute('src', feature.image!)
+  await cover.evaluate((image: HTMLImageElement) => image.decode())
+  await hero.getByRole('link', { name: 'Ler o artigo' }).click()
+  await expect(page).toHaveURL('/materia/' + feature.id)
+  await expect(page.getByRole('heading', { level: 1, name: feature.title })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Fontes e evidências' })).toBeVisible()
 })
 
 test('pesquisa sem acentos, filtra o acervo e navega por editorias', async ({ page }) => {
@@ -103,7 +118,7 @@ for (const [width, height] of [[1536,1024],[1920,1080],[1366,768],[1440,900],[39
     await page.goto('/')
     await page.locator('.hero img').evaluate((image: HTMLImageElement) => image.decode())
     await page.evaluate(() => document.fonts.ready)
-    await expect(page.getByRole('link', { name: 'Ler análise completa' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Ler o artigo' })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
     if (process.env.PORTAL_SCREENSHOTS) await page.screenshot({ path: process.env.PORTAL_SCREENSHOTS + '/portal-' + width + 'x' + height + '.png', animations: 'disabled' })
     if (width === 1536) {
