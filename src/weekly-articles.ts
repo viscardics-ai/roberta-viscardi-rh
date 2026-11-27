@@ -3,7 +3,7 @@ import type { Entry } from './model'
 export const weeklyArticles: [Entry, ...Entry[]] = [
   {
     id: 'quando-tudo-e-urgente',
-    title: 'Quando tudo é urgente, o que ainda cabe?',
+    title: 'Quando o “vou tentar” vira rotina',
     summary: 'Sobre o alívio de poder dizer “hoje não cabe” e ouvir “então vamos decidir juntos”.',
     category: 'Gestão de Pessoas',
     kind: 'Curadoria',
